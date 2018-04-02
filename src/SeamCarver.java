@@ -1,9 +1,12 @@
+import java.lang.reflect.Array;
+
 import edu.princeton.cs.algs4.Picture;
+import edu.princeton.cs.algs4.StdOut;
 
 public class SeamCarver {
     
-    private int[][] rgbMatrix;
-    private double[][] energyMatrix;
+    private Integer[][] rgbMatrix;
+    private Double[][] energyMatrix;
     private boolean isVertical;
      
     // create a seam carver object based on the given picture
@@ -11,12 +14,17 @@ public class SeamCarver {
         if (picture == null) throw new IllegalArgumentException("constructor argument is null");
         int width = picture.width();
         int height = picture.height();
-        // initialize rgb matrix and energy matrix
-        rgbMatrix = new int[width][height];
-        energyMatrix = new double[width][height];
+        // initialize rgb matrix first
+        rgbMatrix = new Integer[width][height];
         for (int col = 0; col < width; col++) {
             for (int row = 0; row < height; row++) {
                 rgbMatrix[col][row] = picture.getRGB(col, row);
+            }
+        }
+        // then initialize energy matrix
+        energyMatrix = new Double[width][height];
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
                 energyMatrix[col][row] = energy(col, row);
             }
         }
@@ -55,16 +63,36 @@ public class SeamCarver {
     // sequence of indices for horizontal seam
     public int[] findHorizontalSeam() {
         if (isVertical) {
-            toHorizontal();
+            this.energyMatrix = toHorizontal(this.energyMatrix);
+            this.rgbMatrix = toHorizontal(this.rgbMatrix);
+            this.isVertical = false;
         }
-        return findVerticalSeam();
+        
+        int[] res = findSeam();
+        
+        // transpose it back
+        this.energyMatrix = toVertical(this.energyMatrix);
+        this.rgbMatrix = toVertical(this.rgbMatrix);
+        this.isVertical = true;
+        
+        return res;
     }
     
     // sequence of indices for vertical seam
     public int[] findVerticalSeam() {
         if (!isVertical) {
-            toVertical();
+            this.energyMatrix = (Double[][]) toVertical(this.energyMatrix);
+            this.rgbMatrix = (Integer[][]) toVertical(this.rgbMatrix);
+            this.isVertical = true;
         }
+
+        return findSeam();
+    }
+    
+    // helper functions
+    
+    // find vertical seam regardless of picture orientation
+    private int[] findSeam() {
         int width = width();
         int height = height();
         double[][] distTo = new double[width][height];
@@ -114,14 +142,75 @@ public class SeamCarver {
             res[i] = edgeTo[end][i + 1];
             end = res[i];
         }
+        
         return res;
     }
     
-    // helper functions
-    
-    // transpose the energy matrix
-    private void toHorizontal() {
+    // horizontal transpose
+    private <T> T[][] toHorizontal(T[][] arr) {
+        // phase 2: diagonal exchange
+        T[][] diagonal = diagonal(arr);
         
+        // phase 1: up and down exchange
+        T[][] upDown = upDown(diagonal);
+        
+        return upDown;
+    }
+    
+    // vertical transpose
+    private <T> T[][] toVertical(T[][] arr) {
+        // phase 1: diagonal exchange
+        T[][] diagonal = diagonal(arr);
+        
+        // phase 1: left and right exchange
+        T[][] leftRight = leftRight(diagonal);
+        
+        return leftRight;
+    }
+    
+    private <T> T[][] upDown(T[][] arr) {
+        int width = arr.length;
+        int height = arr[0].length;
+        
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height / 2; row++) {
+                // exchange [col, row] with [col, height - row - 1]
+                T temp = arr[col][row];
+                arr[col][row] = arr[col][height - row - 1];
+                arr[col][height - row - 1] = temp;
+            }
+        }
+        
+        return arr;
+    }
+    
+    private <T> T[][] leftRight(T[][] arr) {
+        int width = arr.length;
+        
+        for (int col = 0; col < width / 2; col++) {
+            // exchange left and right
+            T[] temp = arr[col];
+            arr[col] = arr[width - col - 1];
+            arr[width - col - 1] = temp;
+        }
+        
+        return arr;
+    }
+    
+    private <T> T[][] diagonal(T[][] arr) {
+        int width = arr.length;
+        int height = arr[0].length;
+        
+        // create a generate array that is T type (not Object type)
+        T[][] res = (T[][]) Array.newInstance(arr[0][0].getClass(), height, width);
+        
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
+                // exchange diagnonal
+                res[row][col] = arr[col][row];
+            }
+        }
+        return res;
     }
     
     private void validatePixel(int x, int y) {
@@ -162,9 +251,28 @@ public class SeamCarver {
         int b = (rgb>>0)&0XFF;
         return new int[] {r, g, b};
     }
+    
+    // test method
+    // print energy matrix
+    private void printEnergyMatrix() {
+        for (int row = 0; row < height(); row++) {
+            for (int col = 0; col < width(); col++) {
+                double energy = energy(col, row);
+                StdOut.printf("%7.2f ", energy);
+            }
+            StdOut.println();
+        }                
+        StdOut.println();
+        StdOut.println();
+    }
 
     public static void main(String[] args) {
+        Picture picture = new Picture(args[0]);
+        SeamCarver carver = new SeamCarver(picture);
+        
+//        int[] verticalSeam = carver.findVerticalSeam();
 
+        int[] horizontalSeam = carver.findHorizontalSeam();
     }
 
 }
