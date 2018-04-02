@@ -2,28 +2,46 @@ import edu.princeton.cs.algs4.Picture;
 
 public class SeamCarver {
     
-    private Picture picture;
-    
+    private int[][] rgbMatrix;
+    private double[][] energyMatrix;
+    private boolean isVertical;
+     
     // create a seam carver object based on the given picture
     public SeamCarver(Picture picture) {
         if (picture == null) throw new IllegalArgumentException("constructor argument is null");
-        // Initialize a new picture as instance variable that is a deep copy of the argument picture
-        this.picture = new Picture(picture);
+        int width = picture.width();
+        int height = picture.height();
+        // initialize rgb matrix and energy matrix
+        rgbMatrix = new int[width][height];
+        energyMatrix = new double[width][height];
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
+                rgbMatrix[col][row] = picture.getRGB(col, row);
+                energyMatrix[col][row] = energy(col, row);
+            }
+        }
+        isVertical = true;
     }
     
     // current picture
     public Picture picture() {
-        return new Picture(this.picture);
+        Picture picture = new Picture(width(), height());
+        for (int col = 0; col < width(); col++) {
+            for (int row = 0; row < height(); row++) {
+                picture.setRGB(col, row, rgbMatrix[col][row]);
+            }
+        }
+        return picture;
     }
     
     // width of current picture
     public int width() {
-        return picture.width();
+        return energyMatrix.length;
     }
     
     // height of current picture
     public int height() {
-        return picture.height();
+        return energyMatrix[0].length;
     }
     
     // energy of pixel at column x and row y
@@ -36,30 +54,33 @@ public class SeamCarver {
     
     // sequence of indices for horizontal seam
     public int[] findHorizontalSeam() {
-        
+        if (isVertical) {
+            toHorizontal();
+        }
+        return findVerticalSeam();
     }
     
     // sequence of indices for vertical seam
     public int[] findVerticalSeam() {
-        // construct a 2d energy array
+        if (!isVertical) {
+            toVertical();
+        }
         int width = width();
         int height = height();
-        double[][] energyMatrix = new double[width][height];
         double[][] distTo = new double[width][height];
         int[][] edgeTo = new int[width][height];
         // initialize above matrixes
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                energyMatrix[x][y] = energy(x, y);
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
                 
-                if (y == 0) {
+                if (row == 0) {
                     // first line, sources
-                    distTo[x][y] = energyMatrix[x][y];
+                    distTo[col][row] = energyMatrix[col][row];
                 } else {
-                    distTo[x][y] = Double.POSITIVE_INFINITY;
+                    distTo[col][row] = Double.POSITIVE_INFINITY;
                 }
                 
-                edgeTo[x][y] = -1;
+                edgeTo[col][row] = -1;
             }
         }
         
@@ -98,6 +119,11 @@ public class SeamCarver {
     
     // helper functions
     
+    // transpose the energy matrix
+    private void toHorizontal() {
+        
+    }
+    
     private void validatePixel(int x, int y) {
         if (x < 0 || x >= width() || y < 0 || y >= height()) 
             throw new IllegalArgumentException("Pixel is outside its prescribed range");
@@ -130,7 +156,7 @@ public class SeamCarver {
     
     // get rgb value of a pixel
     private int[] getRGB(int x, int y) {
-        int rgb = picture.getRGB(x, y);
+        int rgb = rgbMatrix[x][y];
         int r = (rgb>>16)&0XFF;
         int g = (rgb>>8)&0XFF;
         int b = (rgb>>0)&0XFF;
