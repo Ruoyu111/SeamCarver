@@ -1,13 +1,10 @@
-import java.lang.reflect.Array;
-
 import edu.princeton.cs.algs4.Picture;
 import edu.princeton.cs.algs4.StdOut;
 
 public class SeamCarver {
 
-    private Integer[][] rgbMatrix;
-    private Double[][] energyMatrix;
-    private boolean isVertical;
+    private int[][] rgbMatrix;
+    private double[][] energyMatrix;
 
     // create a seam carver object based on the given picture
     public SeamCarver(Picture picture) {
@@ -16,20 +13,19 @@ public class SeamCarver {
         int width = picture.width();
         int height = picture.height();
         // initialize rgb matrix first
-        rgbMatrix = new Integer[width][height];
+        rgbMatrix = new int[width][height];
         for (int col = 0; col < width; col++) {
             for (int row = 0; row < height; row++) {
                 rgbMatrix[col][row] = picture.getRGB(col, row);
             }
         }
         // then initialize energy matrix
-        energyMatrix = new Double[width][height];
+        energyMatrix = new double[width][height];
         for (int col = 0; col < width; col++) {
             for (int row = 0; row < height; row++) {
                 energyMatrix[col][row] = energy(col, row);
             }
         }
-        isVertical = true;
     }
 
     // current picture
@@ -63,30 +59,16 @@ public class SeamCarver {
 
     // sequence of indices for horizontal seam
     public int[] findHorizontalSeam() {
-        if (isVertical) {
-            this.energyMatrix = toHorizontal(this.energyMatrix);
-            this.rgbMatrix = toHorizontal(this.rgbMatrix);
-            this.isVertical = false;
-        }
-
-        int[] res = findSeam();
-
-        // transpose it back
-        this.energyMatrix = toVertical(this.energyMatrix);
-        this.rgbMatrix = toVertical(this.rgbMatrix);
-        this.isVertical = true;
-
-        return res;
+        horizontalTranspose();
+        int[] seam = findSeam();
+        // reverse the
+        reverse(seam);
+        verticalTranspose();
+        return seam;
     }
 
     // sequence of indices for vertical seam
     public int[] findVerticalSeam() {
-        if (!isVertical) {
-            this.energyMatrix = (Double[][]) toVertical(this.energyMatrix);
-            this.rgbMatrix = (Integer[][]) toVertical(this.rgbMatrix);
-            this.isVertical = true;
-        }
-
         return findSeam();
     }
 
@@ -101,23 +83,33 @@ public class SeamCarver {
     // remove vertical seam from current picture
     public void removeVerticalSeam(int[] seam) {
         validateSeam(seam, true);
-
-        // transpose the picture to horizontal
-        // then the seam will be horizontal
-        // use removeHorizontalSeam and transpose it back
-        this.energyMatrix = toHorizontal(this.energyMatrix);
-        this.rgbMatrix = toHorizontal(this.rgbMatrix);
-        this.isVertical = false;
-
+        horizontalTranspose();
         removeHorizontalSeam(seam);
-
-        // transpose it back
-        this.energyMatrix = toVertical(this.energyMatrix);
-        this.rgbMatrix = toVertical(this.rgbMatrix);
-        this.isVertical = true;
+        verticalTranspose();
     }
 
     // helper functions
+
+    private void reverse(int[] arr) {
+        int len = arr.length;
+        for (int i = 0; i < len / 2; i++) {
+            int temp = arr[i];
+            arr[i] = arr[len - i - 1];
+            arr[len - i - 1] = temp;
+        }
+    }
+
+    // transpose SeamCarver to vertical
+    private void verticalTranspose() {
+        this.energyMatrix = toVertical(this.energyMatrix);
+        this.rgbMatrix = toVertical(this.rgbMatrix);
+    }
+
+    // transpose SeamCarver to horizontal
+    private void horizontalTranspose() {
+        this.energyMatrix = toHorizontal(this.energyMatrix);
+        this.rgbMatrix = toHorizontal(this.rgbMatrix);
+    }
 
     // update Energy matrix alone the seam (treat the seam as horizontal seam)
     private void updateEnergy(int[] seam) {
@@ -131,10 +123,23 @@ public class SeamCarver {
     }
 
     // remove (default) horizontal seam helper
-    private <T> T[][] removeHSeamHelper(int[] seam, T[][] matrix) {
+    private int[][] removeHSeamHelper(int[] seam, int[][] matrix) {
         int width = matrix.length;
         int height = matrix[0].length;
-        T[][] res = (T[][]) Array.newInstance(matrix[0][0].getClass(), width, height - 1);
+        int[][] res = new int[width][height - 1];
+        for (int col = 0; col < width; col++) {
+            // copy first part before seam
+            System.arraycopy(matrix[col], 0, res[col], 0, seam[col]);
+            // copy second part after seam
+            System.arraycopy(matrix[col], seam[col] + 1, res[col], seam[col], height - seam[col] - 1);
+        }
+        return res;
+    }
+
+    private double[][] removeHSeamHelper(int[] seam, double[][] matrix) {
+        int width = matrix.length;
+        int height = matrix[0].length;
+        double[][] res = new double[width][height - 1];
         for (int col = 0; col < width; col++) {
             // copy first part before seam
             System.arraycopy(matrix[col], 0, res[col], 0, seam[col]);
@@ -222,35 +227,55 @@ public class SeamCarver {
     }
 
     // horizontal transpose
-    private <T> T[][] toHorizontal(T[][] arr) {
+    private int[][] toHorizontal(int[][] arr) {
         // phase 2: diagonal exchange
-        T[][] diagonal = diagonal(arr);
+        int[][] diagonal = diagonal(arr);
 
         // phase 1: up and down exchange
-        T[][] upDown = upDown(diagonal);
+        int[][] upDown = upDown(diagonal);
+
+        return upDown;
+    }
+
+    private double[][] toHorizontal(double[][] arr) {
+        // phase 2: diagonal exchange
+        double[][] diagonal = diagonal(arr);
+
+        // phase 1: up and down exchange
+        double[][] upDown = upDown(diagonal);
 
         return upDown;
     }
 
     // vertical transpose
-    private <T> T[][] toVertical(T[][] arr) {
+    private int[][] toVertical(int[][] arr) {
         // phase 1: diagonal exchange
-        T[][] diagonal = diagonal(arr);
+        int[][] diagonal = diagonal(arr);
 
         // phase 1: left and right exchange
-        T[][] leftRight = leftRight(diagonal);
+        int[][] leftRight = leftRight(diagonal);
 
         return leftRight;
     }
 
-    private <T> T[][] upDown(T[][] arr) {
+    private double[][] toVertical(double[][] arr) {
+        // phase 1: diagonal exchange
+        double[][] diagonal = diagonal(arr);
+
+        // phase 1: left and right exchange
+        double[][] leftRight = leftRight(diagonal);
+
+        return leftRight;
+    }
+
+    private int[][] upDown(int[][] arr) {
         int width = arr.length;
         int height = arr[0].length;
 
         for (int col = 0; col < width; col++) {
             for (int row = 0; row < height / 2; row++) {
                 // exchange [col, row] with [col, height - row - 1]
-                T temp = arr[col][row];
+                int temp = arr[col][row];
                 arr[col][row] = arr[col][height - row - 1];
                 arr[col][height - row - 1] = temp;
             }
@@ -259,12 +284,28 @@ public class SeamCarver {
         return arr;
     }
 
-    private <T> T[][] leftRight(T[][] arr) {
+    private double[][] upDown(double[][] arr) {
+        int width = arr.length;
+        int height = arr[0].length;
+
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height / 2; row++) {
+                // exchange [col, row] with [col, height - row - 1]
+                double temp = arr[col][row];
+                arr[col][row] = arr[col][height - row - 1];
+                arr[col][height - row - 1] = temp;
+            }
+        }
+
+        return arr;
+    }
+
+    private int[][] leftRight(int[][] arr) {
         int width = arr.length;
 
         for (int col = 0; col < width / 2; col++) {
             // exchange left and right
-            T[] temp = arr[col];
+            int[] temp = arr[col];
             arr[col] = arr[width - col - 1];
             arr[width - col - 1] = temp;
         }
@@ -272,12 +313,41 @@ public class SeamCarver {
         return arr;
     }
 
-    private <T> T[][] diagonal(T[][] arr) {
+    private double[][] leftRight(double[][] arr) {
+        int width = arr.length;
+
+        for (int col = 0; col < width / 2; col++) {
+            // exchange left and right
+            double[] temp = arr[col];
+            arr[col] = arr[width - col - 1];
+            arr[width - col - 1] = temp;
+        }
+
+        return arr;
+    }
+
+    private int[][] diagonal(int[][] arr) {
         int width = arr.length;
         int height = arr[0].length;
 
         // create a generate array that is T type (not Object type)
-        T[][] res = (T[][]) Array.newInstance(arr[0][0].getClass(), height, width);
+        int[][] res = new int[height][width];
+
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
+                // exchange diagnonal
+                res[row][col] = arr[col][row];
+            }
+        }
+        return res;
+    }
+
+    private double[][] diagonal(double[][] arr) {
+        int width = arr.length;
+        int height = arr[0].length;
+
+        // create a generate array that is T type (not Object type)
+        double[][] res = new double[height][width];
 
         for (int col = 0; col < width; col++) {
             for (int row = 0; row < height; row++) {
