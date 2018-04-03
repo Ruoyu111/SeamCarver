@@ -83,12 +83,22 @@ public class SeamCarver {
     // remove vertical seam from current picture
     public void removeVerticalSeam(int[] seam) {
         validateSeam(seam, true);
+        int[] transpose = horizontalTransposeSeam(seam);
         horizontalTranspose();
-        removeHorizontalSeam(seam);
+        removeHorizontalSeam(transpose);
         verticalTranspose();
     }
 
     // helper functions
+
+    private int[] horizontalTransposeSeam(int[] seam) {
+        int width = width();
+        int[] transpose = new int[seam.length];
+        for (int i = 0; i < seam.length; i++) {
+            transpose[i] = width - seam[i] - 1;
+        }
+        return transpose;
+    }
 
     private void reverse(int[] arr) {
         int len = arr.length;
@@ -115,7 +125,9 @@ public class SeamCarver {
     private void updateEnergy(int[] seam) {
         for (int col = 0; col < width(); col++) {
             int seamPos = seam[col];
-            energyMatrix[col][seamPos] = energy(col, seamPos);
+            if (seamPos < height()) {
+                energyMatrix[col][seamPos] = energy(col, seamPos);
+            }
             if (seamPos - 1 >= 0) {
                 energyMatrix[col][seamPos - 1] = energy(col, seamPos - 1);
             }
@@ -159,6 +171,10 @@ public class SeamCarver {
             if (width() <= 1)
                 throw new IllegalArgumentException(
                         "removeVerticalSeam() is called when the width of the picture is less than or equal to 1");
+            for (int i : seam) {
+                if (i < 0 || i >= width())
+                    throw new IllegalArgumentException("an entry in seam is outside its prescribed range");
+            }
         } else {
             // horizontal seam validate
             if (seam.length != width())
@@ -167,6 +183,17 @@ public class SeamCarver {
             if (height() <= 1)
                 throw new IllegalArgumentException(
                         "removeHorizontalSeam() is called when the height of the picture is less than or equal to 1");
+            for (int i : seam) {
+                if (i < 0 || i >= height())
+                    throw new IllegalArgumentException("an entry in seam is outside its prescribed range");
+            }
+        }
+        // check distance
+        if (seam.length > 1) {
+            for (int i = 1; i < seam.length; i++) {
+                if (Math.abs(seam[i] - seam[i - 1]) > 1)
+                    throw new IllegalArgumentException("two adjacent entries in seam differ by more than 1");
+            }
         }
     }
 
@@ -422,21 +449,22 @@ public class SeamCarver {
         System.out.println();
         System.out.println();
 
-        int[] horizontalSeam = carver.findHorizontalSeam();
+        carver.horizontalTranspose();
 
         carver.printEnergyMatrix();
-
-        for (int x = 0; x < horizontalSeam.length; x++) {
-            System.out.print(horizontalSeam[x] + " ");
-        }
-        System.out.println();
-
-        carver.removeHorizontalSeam(horizontalSeam);
-
-        System.out.println();
-        System.out.println();
-
-        carver.printEnergyMatrix();
+        /**
+         * int[] horizontalSeam = carver.findHorizontalSeam();
+         * 
+         * carver.printEnergyMatrix();
+         * 
+         * for (int x = 0; x < horizontalSeam.length; x++) {
+         * System.out.print(horizontalSeam[x] + " "); } System.out.println();
+         * 
+         * carver.removeHorizontalSeam(horizontalSeam);
+         * 
+         * System.out.println(); System.out.println();
+         * 
+         * carver.printEnergyMatrix();
+         */
     }
-
 }
